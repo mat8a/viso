@@ -330,6 +330,27 @@ canvas { pointer-events: none; }
   line-height: 1.5;
 }
 
+.emotion-legend {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: #09121a;
+}
+
+.emotion-legend-title {
+  color: var(--green);
+  font: 10px ui-monospace, Menlo, monospace;
+  letter-spacing: .12em;
+}
+
+.emotion-legend p {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.emotion-legend-detail { color: var(--muted); }
+
 .message {
   min-height: 40px;
   margin: 18px 0 0;
@@ -384,7 +405,9 @@ canvas { pointer-events: none; }
 
   <div class="intro">
     <div>
-      <h1>Espressioni in diretta<span style="color:var(--green)">.</span></h1>
+      <h1>
+        Espressioni in diretta<span style="color:var(--green)">.</span>
+      </h1>
       <p class="subtitle">
         Segnali facciali dal vivo · elaborazione nel browser
       </p>
@@ -458,14 +481,27 @@ canvas { pointer-events: none; }
         <div class="empty">In attesa della fotocamera.</div>
       </div>
 
+      <div class="emotion-legend">
+        <div class="emotion-legend-title">
+          ETICHETTE DELLA DEMO
+        </div>
+        <p>
+          GIOIA · TRISTEZZA · RABBIA · PAURA · SORPRESA · DISGUSTO
+        </p>
+        <p class="emotion-legend-detail">
+          Se nessuna regola scatta, compare INDETERMINATA.
+          Le etichette descrivono movimenti del volto, non indicano
+          con certezza l'emozione provata.
+        </p>
+      </div>
+
       <p id="message" class="message" role="status">
         Premi Avvia nel riquadro video e autorizza la fotocamera.
       </p>
 
       <p class="note">
         52 BLENDSHAPE · SOGLIA VISIVA 0.30<br>
-        Le etichette emotive sono regole dimostrative, non letture
-        affidabili dello stato emotivo. Il video non viene caricato
+        Etichette dimostrative. Il video non viene caricato
         su un server da questa pagina.
       </p>
     </aside>
@@ -596,6 +632,7 @@ function stopAnalysis() {
 
   stopCamera();
   resetInterface();
+
   message.textContent =
     "Analisi fermata. La fotocamera è spenta.";
 }
@@ -630,8 +667,8 @@ function updateSignals(categories) {
     ])
   );
 
-  // Gli altri segnali degli occhi vengono esclusi SOLO dal pannello.
-  // eyeSquintLeft e eyeSquintRight diventano una sola riga.
+  // Gli altri segnali degli occhi restano nell'analisi,
+  // ma non compaiono nel pannello.
   const visible = categories
     .filter(item =>
       item.categoryName !== "_neutral" &&
@@ -642,6 +679,7 @@ function updateSignals(categories) {
       score: item.score
     }));
 
+  // Una sola riga per gli occhi stretti.
   visible.push({
     categoryName: "eyeSquint",
     score:
@@ -693,6 +731,7 @@ function updateSignals(categories) {
 
     const fill = document.createElement("i");
     fill.className = "meter-fill";
+
     fill.style.width =
       Math.round(
         Math.max(0, Math.min(1, item.score)) * 100
@@ -742,14 +781,17 @@ function emotionLabel(scores) {
   const browUp = get("browInnerUp");
 
   // Regole dimostrative, non diagnosi emotive.
-  if (noseSneer > 0.48) {
+
+  // Soglia ridotta da 0.48 a 0.38.
+  if (noseSneer > 0.38) {
     return "DISGUSTO";
   }
 
+  // Soglie ridotte per la regola scenica PAURA.
   if (
-    eyeWide > 0.40 &&
-    browUp > 0.30 &&
-    mouthStretch > 0.30
+    eyeWide > 0.34 &&
+    browUp > 0.25 &&
+    mouthStretch > 0.25
   ) {
     return "PAURA";
   }
