@@ -32,7 +32,7 @@
 </head>
 <body>
   <h1>Espressioni facciali</h1>
-  <p>Demo di movimenti del viso, lettura delle emozioni.</p>
+  <p>Demo di movimenti del viso, non lettura delle emozioni.</p>
 
   <button id="start">Avvia la camera</button>
   <p id="status" role="status">Pronto.</p>
@@ -46,4 +46,113 @@
     import {
       FaceLandmarker,
       FilesetResolver
+    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/vision_bundle.mjs";
+
+    const MODEL =
+      "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+    const WASM =
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm";
+
+    const button = document.querySelector("#start");
+    const video = document.querySelector("#video");
+    const status = document.querySelector("#status");
+    const labels = document.querySelector("#labels");
+
+    const movements = [
+      { name: "Sorriso sinistro", key: "mouthSmileLeft" },
+      { name: "Sorriso destro", key: "mouthSmileRight" },
+      { name: "Bocca aperta", key: "jawOpen" },
+      { name: "Sopracciglia interne sollevate", key: "browInnerUp" },
+      { name: "Sopracciglio sinistro abbassato", key: "browDownLeft" },
+      { name: "Sopracciglio destro abbassato", key: "browDownRight" }
+    ];
+
+    let landmarker;
+    let lastVideoTime = -1;
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      status.textContent = "Richiedo la camera…";
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: "user" }
+        });
+
+        video.srcObject = stream;
+        await video.play();
+
+        status.textContent = "Carico MediaPipe: serve Internet al primo avvio…";
+        const vision = await FilesetResolver.forVisionTasks(WASM);
+
+        // CPU prima: è la scelta più semplice da provare su due piattaforme.
+        landmarker = await FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: MODEL,
+            delegate: "CPU"
+          },
+          runningMode: "VIDEO",
+          numFaces: 1,
+          outputFaceBlendshapes: true
+        });
+
+        status.textContent = "In diretta.";
+        requestAnimationFrame(analyze);
+      } catch (error) {
+        status.textContent = "Avvio non riuscito: " + error.message;
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach(track => track.stop());
+          video.srcObject = null;
+        }
+        button.disabled = false;
+      }
+    });
+
+    function analyze() {
+      try {
+        if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+          const result = landmarker.detectForVideo(video, performance.now());
+          lastVideoTime = video.currentTime;
+
+          const face = result.faceBlendshapes?.[0];
+          if (!face) {
+            labels.innerHTML = "<li>Nessun volto rilevato.</li>";
+          } else {
+            const scores = new Map(
+              face.categories.map(item => [item.categoryName, item.score])
+            );
+
+            const visible = movements
+              .map(item => ({
+                ...item,
+                score: scores.get(item.key) ?? 0
+              }))
+              .filter(item => item.score >= 0.40)
+              .sort((a, b) => b.score - a.score)
+              .slice(0, 3);
+
+            labels.replaceChildren();
+
+            if (visible.length === 0) {
+              const li = document.createElement("li");
+              li.textContent = "Nessun movimento sopra la soglia.";
+              labels.append(li);
+            }
+
+            for (const item of visible) {
+              const li = document.createElement("li");
+              li.textContent =
+                `${item.name} — ${item.score.toFixed(2)} (${item.key})`;
+              labels.append(li);
+            }
+          }
+        }
+        requestAnimationFrame(analyze);
+      } catch (error) {
+        status.textContent = "Analisi interrotta: " + error.message;
+      }
     }
+  </script>
+</body>
+</html>
