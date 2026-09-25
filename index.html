@@ -524,6 +524,12 @@ const LIBRARY =
   "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/vision_bundle.mjs";
 
 const ACTIVE_THRESHOLD = 0.30;
+
+// Frame consecutivi con la stessa etichetta prima di mostrarla.
+// A 30 fps, 3 frame ≈ 100 ms: toglie lo sfarfallio
+// senza nascondere i movimenti brevi.
+const HOLD_FRAMES = 3;
+
 const $ = selector => document.querySelector(selector);
 
 const viewer = $("#viewer");
@@ -541,65 +547,120 @@ const signals = $("#signals");
 const signalCount = $("#signalCount");
 
 let landmarker = null;
+let landmarkerPromise = null;
 let running = false;
+let session = 0;
 let animationId = null;
 let lastVideoTime = -1;
 let lastFrameTime = 0;
+let fpsAverage = 0;
 let startedAt = 0;
+
+let candidateLabel = null;
+let candidateFrames = 0;
+let shownLabel = "INDETERMINATA";
 
 startButton.addEventListener("click", startAnalysis);
 stopButton.addEventListener("click", stopAnalysis);
 
-async function startAnalysis() {
-  startButton.disabled = true;
-  message.classList.remove("error");
-  message.textContent = "Richiedo la fotocamera…";
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: "user" }
-    });
-
-    video.srcObject = stream;
-    await video.play();
-
-    startScreen.hidden = true;
-    faceState.textContent = "LOADING";
-    message.textContent = "Carico il modello: serve Internet…";
-
-    if (!landmarker) {
+// Carica il modello una sola volta, anche se si preme
+// Avvia più volte mentre il download è in corso.
+function loadLandmarker() {
+  if (!landmarkerPromise) {
+    landmarkerPromise = (async () => {
       const { FaceLandmarker, FilesetResolver } =
         await import(LIBRARY);
 
       const vision =
         await FilesetResolver.forVisionTasks(WASM);
 
-      landmarker =
-        await FaceLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: MODEL,
-            delegate: "CPU"
-          },
-          runningMode: "VIDEO",
-          numFaces: 1,
-          outputFaceBlendshapes: true
-        });
+      return FaceLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: MODEL,
+          delegate: "CPU"
+        },
+        runningMode: "VIDEO",
+        numFaces: 1,
+        outputFaceBlendshapes: true
+      });
+    })().catch(error => {
+      landmarkerPromise = null;
+      throw error;
+    });
+  }
+
+  return landmarkerPromise;
+}
+
+async function startAnalysis() {
+  const current = ++session;
+
+  startButton.disabled = true;
+  message.classList.remove("error");
+  message.textContent = "Richiedo la fotocamera…";
+
+  try {
+    if (
+      !window.isSecureContext ||
+      !navigator.mediaDevices?.getUserMedia
+    ) {
+      throw new Error(
+        "la fotocamera funziona solo da una pagina HTTPS (o da localhost)."
+      );
     }
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: "user",
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      }
+    });
+
+    if (current !== session) {
+      stream.getTracks().forEach(track => track.stop());
+      return;
+    }
+
+    video.srcObject = stream;
+
+    // Fotocamera scollegata o permesso revocato.
+    stream.getVideoTracks()[0]?.addEventListener("ended", () => {
+      if (video.srcObject !== stream) return;
+      stopAnalysis();
+      message.classList.add("error");
+      message.textContent = "La fotocamera si è disconnessa.";
+    });
+
+    await video.play();
+
+    startScreen.hidden = true;
+    stopButton.hidden = false;
+    faceState.textContent = "LOADING";
+    message.textContent = "Carico il modello: serve Internet…";
+
+    landmarker = await loadLandmarker();
+
+    // Fermata durante il caricamento del modello.
+    if (current !== session) return;
 
     running = true;
     startedAt = performance.now();
     lastFrameTime = 0;
     lastVideoTime = -1;
+    fpsAverage = 0;
+    resetLabel();
 
     topStatus.textContent = "● LIVE";
     topStatus.classList.add("live");
     faceState.textContent = "SEARCHING";
     message.textContent = "Analisi in diretta.";
-    stopButton.hidden = false;
 
     animationId = requestAnimationFrame(analyze);
   } catch (error) {
+    if (current !== session) return;
+
     stopCamera();
     resetInterface();
 
@@ -623,6 +684,7 @@ function stopCamera() {
 }
 
 function stopAnalysis() {
+  session++;
   running = false;
 
   if (animationId !== null) {
@@ -633,6 +695,7 @@ function stopAnalysis() {
   stopCamera();
   resetInterface();
 
+  message.classList.remove("error");
   message.textContent =
     "Analisi fermata. La fotocamera è spenta.";
 }
@@ -654,9 +717,32 @@ function resetInterface() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  resetLabel();
+
   signalCount.textContent = "00 / 03";
   signals.innerHTML =
     '<div class="empty">In attesa della fotocamera.</div>';
+}
+
+function resetLabel() {
+  candidateLabel = null;
+  candidateFrames = 0;
+  shownLabel = "INDETERMINATA";
+}
+
+function stableLabel(next) {
+  if (next === candidateLabel) {
+    candidateFrames++;
+  } else {
+    candidateLabel = next;
+    candidateFrames = 1;
+  }
+
+  if (candidateFrames >= HOLD_FRAMES) {
+    shownLabel = candidateLabel;
+  }
+
+  return shownLabel;
 }
 
 function updateSignals(categories) {
@@ -745,6 +831,8 @@ function updateSignals(categories) {
   signals.replaceChildren(fragment);
 }
 
+// Regole dimostrative, non diagnosi emotive.
+// L'ordine conta: vince la prima regola che scatta.
 function emotionLabel(scores) {
   const get = key => scores.get(key) ?? 0;
 
@@ -780,14 +868,14 @@ function emotionLabel(scores) {
   const jaw = get("jawOpen");
   const browUp = get("browInnerUp");
 
-  // Regole dimostrative, non diagnosi emotive.
-
-  // Soglia ridotta da 0.48 a 0.38.
-  if (noseSneer > 0.38) {
+  // Naso arricciato senza sorriso: nelle risate ampie
+  // anche noseSneer sale, quindi il sorriso va escluso.
+  if (noseSneer > 0.38 && smile < 0.30) {
     return "DISGUSTO";
   }
 
-  // Soglie ridotte per la regola scenica PAURA.
+  // Occhi spalancati, sopracciglia interne alzate,
+  // labbra tirate lateralmente.
   if (
     eyeWide > 0.34 &&
     browUp > 0.25 &&
@@ -796,6 +884,7 @@ function emotionLabel(scores) {
     return "PAURA";
   }
 
+  // Bocca aperta e sopracciglia alzate.
   if (
     jaw > 0.48 &&
     browUp > 0.38
@@ -803,6 +892,7 @@ function emotionLabel(scores) {
     return "SORPRESA";
   }
 
+  // Sorriso su entrambi i lati.
   if (
     smile > 0.52 &&
     get("mouthSmileLeft") > 0.40 &&
@@ -811,6 +901,8 @@ function emotionLabel(scores) {
     return "GIOIA";
   }
 
+  // Palpebre strette con sopracciglia abbassate
+  // o labbra premute.
   if (
     eyeSquint > 0.42 &&
     (
@@ -821,6 +913,7 @@ function emotionLabel(scores) {
     return "RABBIA";
   }
 
+  // Angoli della bocca abbassati su entrambi i lati.
   if (
     frownL > 0.25 &&
     frownR > 0.25
@@ -971,25 +1064,31 @@ function analyze(now) {
         const box = drawFace(points);
 
         faceLabel.textContent =
-          emotionLabel(scores);
+          stableLabel(emotionLabel(scores));
 
         faceLabel.hidden = false;
         positionFaceLabel(box);
       } else {
         faceState.textContent = "NO FACE";
         faceLabel.hidden = true;
+        resetLabel();
         signalCount.textContent = "00 / 03";
 
         signals.innerHTML =
           '<div class="empty">Nessun volto rilevato.</div>';
       }
 
+      // FPS con media mobile, per un valore leggibile.
       if (lastFrameTime) {
+        const instant =
+          1000 / (now - lastFrameTime);
+
+        fpsAverage = fpsAverage
+          ? fpsAverage * 0.9 + instant * 0.1
+          : instant;
+
         $("#fps").textContent =
-          "FPS " +
-          Math.round(
-            1000 / (now - lastFrameTime)
-          );
+          "FPS " + Math.round(fpsAverage);
       }
 
       lastFrameTime = now;
