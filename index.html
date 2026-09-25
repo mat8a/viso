@@ -19,9 +19,7 @@
   --amber: #e7ba69;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -73,9 +71,7 @@ body {
   white-space: nowrap;
 }
 
-.top-status.live {
-  color: var(--green);
-}
+.top-status.live { color: var(--green); }
 
 .intro {
   display: flex;
@@ -134,9 +130,7 @@ canvas {
   transform: scaleX(-1);
 }
 
-canvas {
-  pointer-events: none;
-}
+canvas { pointer-events: none; }
 
 .scan-lines {
   position: absolute;
@@ -161,29 +155,10 @@ canvas {
   border-style: solid;
 }
 
-.tl {
-  top: 13px;
-  left: 13px;
-  border-width: 2px 0 0 2px;
-}
-
-.tr {
-  top: 13px;
-  right: 13px;
-  border-width: 2px 2px 0 0;
-}
-
-.bl {
-  bottom: 13px;
-  left: 13px;
-  border-width: 0 0 2px 2px;
-}
-
-.br {
-  bottom: 13px;
-  right: 13px;
-  border-width: 0 2px 2px 0;
-}
+.tl { top: 13px; left: 13px; border-width: 2px 0 0 2px; }
+.tr { top: 13px; right: 13px; border-width: 2px 2px 0 0; }
+.bl { bottom: 13px; left: 13px; border-width: 0 0 2px 2px; }
+.br { bottom: 13px; right: 13px; border-width: 0 2px 2px 0; }
 
 .viewer-top,
 .viewer-bottom {
@@ -200,14 +175,8 @@ canvas {
   text-shadow: 0 1px 5px #000;
 }
 
-.viewer-top {
-  top: 24px;
-}
-
-.viewer-bottom {
-  bottom: 24px;
-  color: #c4d8d2;
-}
+.viewer-top { top: 24px; }
+.viewer-bottom { bottom: 24px; color: #c4d8d2; }
 
 .chip {
   padding: 5px 7px;
@@ -229,9 +198,7 @@ canvas {
     radial-gradient(circle at center, #14242a 0, #03080c 65%);
 }
 
-[hidden] {
-  display: none !important;
-}
+[hidden] { display: none !important; }
 
 .reticle {
   width: 78px;
@@ -315,9 +282,7 @@ canvas {
   letter-spacing: .12em;
 }
 
-.count {
-  color: var(--muted);
-}
+.count { color: var(--muted); }
 
 .panel-subtitle {
   margin: 0 0 14px;
@@ -337,9 +302,7 @@ canvas {
   font-size: 12px;
 }
 
-.metric-name {
-  overflow-wrap: anywhere;
-}
+.metric-name { overflow-wrap: anywhere; }
 
 .metric-value {
   color: var(--green);
@@ -376,9 +339,7 @@ canvas {
   overflow-wrap: anywhere;
 }
 
-.message.error {
-  color: var(--amber);
-}
+.message.error { color: var(--amber); }
 
 .note {
   margin: 15px 0 0;
@@ -398,47 +359,15 @@ canvas {
 }
 
 @media (max-width: 760px) {
-  .app {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .intro {
-    padding: 20px 0 15px;
-  }
-
-  .session {
-    display: none;
-  }
-
-  .layout {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .viewer {
-    aspect-ratio: 3 / 4;
-    min-height: 0;
-  }
-
-  .panel {
-    padding: 14px;
-  }
-
-  .viewer-top,
-  .viewer-bottom {
-    left: 21px;
-    right: 21px;
-  }
-
-  .stop-button {
-    right: 21px;
-    bottom: 47px;
-  }
-
-  .footer {
-    font-size: 9px;
-  }
+  .app { padding-left: 12px; padding-right: 12px; }
+  .intro { padding: 20px 0 15px; }
+  .session { display: none; }
+  .layout { grid-template-columns: 1fr; gap: 12px; }
+  .viewer { aspect-ratio: 3 / 4; min-height: 0; }
+  .panel { padding: 14px; }
+  .viewer-top, .viewer-bottom { left: 21px; right: 21px; }
+  .stop-button { right: 21px; bottom: 47px; }
+  .footer { font-size: 9px; }
 }
 </style>
 </head>
@@ -455,9 +384,7 @@ canvas {
 
   <div class="intro">
     <div>
-      <h1>
-        Espressioni in diretta<span style="color:var(--green)">.</span>
-      </h1>
+      <h1>Espressioni in diretta<span style="color:var(--green)">.</span></h1>
       <p class="subtitle">
         Segnali facciali dal vivo · elaborazione nel browser
       </p>
@@ -524,7 +451,7 @@ canvas {
 
       <p class="panel-subtitle">
         Tutti i coefficienti elaborati · visibili solo i tre più alti
-        sopra 0.30
+        sopra 0.30. Degli occhi si mostra solo eyeSquint.
       </p>
 
       <div id="signals">
@@ -567,7 +494,6 @@ const viewer = $("#viewer");
 const video = $("#video");
 const canvas = $("#overlay");
 const ctx = canvas.getContext("2d");
-
 const startScreen = $("#startScreen");
 const startButton = $("#start");
 const stopButton = $("#stop");
@@ -689,12 +615,7 @@ function resetInterface() {
   $("#fps").textContent = "FPS --";
   $("#clock").textContent = "T 00:00";
 
-  ctx.clearRect(
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   signalCount.textContent = "00 / 03";
   signals.innerHTML =
@@ -702,9 +623,36 @@ function resetInterface() {
 }
 
 function updateSignals(categories) {
-  const active = categories
+  const scores = new Map(
+    categories.map(item => [
+      item.categoryName,
+      item.score
+    ])
+  );
+
+  // Gli altri segnali degli occhi vengono esclusi SOLO dal pannello.
+  // eyeSquintLeft e eyeSquintRight diventano una sola riga.
+  const visible = categories
     .filter(item =>
       item.categoryName !== "_neutral" &&
+      !item.categoryName.startsWith("eye")
+    )
+    .map(item => ({
+      categoryName: item.categoryName,
+      score: item.score
+    }));
+
+  visible.push({
+    categoryName: "eyeSquint",
+    score:
+      (
+        (scores.get("eyeSquintLeft") ?? 0) +
+        (scores.get("eyeSquintRight") ?? 0)
+      ) / 2
+  });
+
+  const active = visible
+    .filter(item =>
       item.score >= ACTIVE_THRESHOLD
     )
     .sort((a, b) => b.score - a.score)
@@ -793,12 +741,11 @@ function emotionLabel(scores) {
   const jaw = get("jawOpen");
   const browUp = get("browInnerUp");
 
-  // Queste sono regole dimostrative, non diagnosi emotive.
+  // Regole dimostrative, non diagnosi emotive.
   if (noseSneer > 0.48) {
     return "DISGUSTO";
   }
 
-  // Controllata prima di SORPRESA, che usa segnali simili.
   if (
     eyeWide > 0.40 &&
     browUp > 0.30 &&
@@ -822,7 +769,6 @@ function emotionLabel(scores) {
     return "GIOIA";
   }
 
-  // Occhi più stretti di prima: soglia alzata a 0.42.
   if (
     eyeSquint > 0.42 &&
     (
@@ -833,7 +779,6 @@ function emotionLabel(scores) {
     return "RABBIA";
   }
 
-  // Entrambi gli angoli della bocca devono scendere.
   if (
     frownL > 0.25 &&
     frownR > 0.25
@@ -892,11 +837,7 @@ function positionFaceLabel(box) {
 
   if (!iw || !ih) return;
 
-  const scale = Math.max(
-    vw / iw,
-    vh / ih
-  );
-
+  const scale = Math.max(vw / iw, vh / ih);
   const displayedWidth = iw * scale;
   const displayedHeight = ih * scale;
 
@@ -916,10 +857,11 @@ function positionFaceLabel(box) {
     offsetY +
     box.top * displayedHeight;
 
-  const maxLeft = Math.max(
-    8,
-    vw - faceLabel.offsetWidth - 8
-  );
+  const maxLeft =
+    Math.max(
+      8,
+      vw - faceLabel.offsetWidth - 8
+    );
 
   faceLabel.style.left =
     Math.max(
