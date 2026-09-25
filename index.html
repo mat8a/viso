@@ -1,5 +1,49 @@
 <!doctype html>
 <html lang="it">
-<meta charset="utf-8">
-<title>viso</title>
-<p>pagina viva</p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Espressioni facciali — demo</title>
+  <style>
+    body {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 20px;
+      font: 18px system-ui, sans-serif;
+      background: #111827;
+      color: white;
+    }
+    button {
+      padding: 14px 22px;
+      font: inherit;
+      border: 0;
+      border-radius: 10px;
+    }
+    video {
+      display: block;
+      width: 100%;
+      margin-top: 18px;
+      border-radius: 12px;
+      transform: scaleX(-1);
+    }
+    li { margin: 10px 0; }
+    small { color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <h1>Espressioni facciali</h1>
+  <p>Demo di movimenti del viso, non lettura delle emozioni.</p>
+
+  <button id="start">Avvia la camera</button>
+  <p id="status" role="status">Pronto.</p>
+  <video id="video" autoplay muted playsinline></video>
+
+  <h2>Movimenti rilevati</h2>
+  <ul id="labels"><li>Avvia la camera per iniziare.</li></ul>
+  <small>Le soglie sono indicative: luce, posizione e volto cambiano i risultati.</small>
+
+  <script type="module">
+    import {
+      FaceLandmarker,
+      FilesetResolver
+    }
