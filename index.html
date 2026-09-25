@@ -5,70 +5,444 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#080d13">
 <title>FACIAL MOTION LAB</title>
+
 <style>
-:root{color-scheme:dark;--bg:#080d13;--panel:#0d151e;--line:#22343e;--text:#e6efed;--muted:#8da3a8;--green:#50efa0;--dim:#267b58;--amber:#e7ba69}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#162631 0,transparent 55%),var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-.app{width:min(1260px,100%);margin:auto;padding:max(18px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom))}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:11px;color:var(--green);font:700 12px ui-monospace,Menlo,monospace;letter-spacing:.16em}
-.brand-mark{width:9px;height:9px;background:var(--green);box-shadow:0 0 14px var(--green)}
-.top-status{color:var(--muted);font:11px ui-monospace,Menlo,monospace;white-space:nowrap}
-.top-status.live{color:var(--green)}
-.intro{display:flex;align-items:end;justify-content:space-between;gap:16px;padding:25px 0 20px}
-h1{margin:0;font-size:clamp(27px,4vw,46px);font-weight:500;letter-spacing:-.045em;line-height:1.08}
-.subtitle{margin:9px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
-.session{color:var(--muted);font:11px/1.8 ui-monospace,Menlo,monospace;text-align:right;white-space:nowrap}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
-.viewer{position:relative;overflow:hidden;border:1px solid var(--line);background:#020507;aspect-ratio:4/3;min-height:280px}
-video,canvas{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
-canvas{pointer-events:none}
-.scan-lines{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0,transparent 5px,#0002 6px);opacity:.35}
-.corner{position:absolute;z-index:2;width:22px;height:22px;pointer-events:none;border-color:var(--green);border-style:solid}
-.tl{top:13px;left:13px;border-width:2px 0 0 2px}
-.tr{top:13px;right:13px;border-width:2px 2px 0 0}
-.bl{bottom:13px;left:13px;border-width:0 0 2px 2px}
-.br{bottom:13px;right:13px;border-width:0 2px 2px 0}
-.viewer-top,.viewer-bottom{position:absolute;z-index:3;left:24px;right:24px;display:flex;justify-content:space-between;gap:12px;pointer-events:none;font:10px ui-monospace,Menlo,monospace;letter-spacing:.08em;text-shadow:0 1px 5px #000}
-.viewer-top{top:24px}
-.viewer-bottom{bottom:24px;color:#c4d8d2}
-.chip{padding:5px 7px;color:var(--green);background:#03130dcc;border:1px solid var(--dim)}
-.start-screen{position:absolute;z-index:5;inset:0;display:grid;place-content:center;gap:17px;padding:30px;text-align:center;background:radial-gradient(circle at center,#14242a 0,#03080c 65%)}
-[hidden]{display:none!important}
-.reticle{width:78px;height:78px;margin:auto;display:grid;place-items:center;border:1px solid var(--dim);border-radius:50%;color:var(--green);font:34px ui-monospace,monospace;box-shadow:0 0 35px #50efa025}
-.start-caption{color:var(--muted);font:10px ui-monospace,Menlo,monospace;letter-spacing:.15em}
-.start-button{min-width:205px;padding:15px 19px;border:1px solid var(--green);border-radius:0;background:#102a20;color:var(--green);font:700 11px ui-monospace,Menlo,monospace;letter-spacing:.12em;cursor:pointer}
-.start-button:disabled{opacity:.6;cursor:default}
-.stop-button{position:absolute;z-index:6;right:23px;bottom:51px;padding:9px 11px;border:1px solid var(--amber);border-radius:0;background:#11100ce0;color:var(--amber);font:700 10px ui-monospace,Menlo,monospace;letter-spacing:.12em;cursor:pointer}
-.face-label{position:absolute;z-index:4;max-width:calc(100% - 20px);padding:6px 8px;border:1px solid var(--green);background:#071b13ed;color:var(--green);font:700 10px ui-monospace,Menlo,monospace;letter-spacing:.08em;white-space:nowrap;pointer-events:none;box-shadow:0 0 16px #50efa02b}
-.panel{padding:18px;border:1px solid var(--line);background:linear-gradient(150deg,#101b24,var(--panel))}
-.panel-heading{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px;color:var(--green);font:11px ui-monospace,Menlo,monospace;letter-spacing:.12em}
-.count{color:var(--muted)}
-.panel-subtitle{margin:0 0 14px;color:var(--muted);font:10px/1.5 ui-monospace,Menlo,monospace}
-.metric{padding:11px 0;border-top:1px solid var(--line)}
-.metric-head{display:flex;justify-content:space-between;gap:10px;font-size:12px}
-.metric-name{overflow-wrap:anywhere}
-.metric-value{color:var(--green);font:12px ui-monospace,Menlo,monospace}
-.meter{height:3px;margin-top:9px;background:#24333b}
-.meter-fill{display:block;height:100%;background:var(--green);box-shadow:0 0 10px #50efa088}
-.empty{padding:19px 0;border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:1.5}
-.message{min-height:40px;margin:18px 0 0;color:var(--muted);font-size:12px;line-height:1.45;overflow-wrap:anywhere}
-.message.error{color:var(--amber)}
-.note{margin:15px 0 0;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font:10px/1.6 ui-monospace,Menlo,monospace}
-.footer{margin-top:16px;display:flex;justify-content:space-between;gap:12px;color:var(--muted);font:10px ui-monospace,Menlo,monospace}
-@media(max-width:760px){
-  .app{padding-left:12px;padding-right:12px}
-  .intro{padding:20px 0 15px}
-  .session{display:none}
-  .layout{grid-template-columns:1fr;gap:12px}
-  .viewer{aspect-ratio:3/4;min-height:0}
-  .panel{padding:14px}
-  .viewer-top,.viewer-bottom{left:21px;right:21px}
-  .stop-button{right:21px;bottom:47px}
-  .footer{font-size:9px}
+:root {
+  color-scheme: dark;
+  --bg: #080d13;
+  --panel: #0d151e;
+  --line: #22343e;
+  --text: #e6efed;
+  --muted: #8da3a8;
+  --green: #50efa0;
+  --dim: #267b58;
+  --amber: #e7ba69;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% 0%, #162631 0, transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.app {
+  width: min(1260px, 100%);
+  margin: auto;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    20px
+    max(24px, env(safe-area-inset-bottom));
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--green);
+  font: 700 12px ui-monospace, Menlo, monospace;
+  letter-spacing: .16em;
+}
+
+.brand-mark {
+  width: 9px;
+  height: 9px;
+  background: var(--green);
+  box-shadow: 0 0 14px var(--green);
+}
+
+.top-status {
+  color: var(--muted);
+  font: 11px ui-monospace, Menlo, monospace;
+  white-space: nowrap;
+}
+
+.top-status.live {
+  color: var(--green);
+}
+
+.intro {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 25px 0 20px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(27px, 4vw, 46px);
+  font-weight: 500;
+  letter-spacing: -.045em;
+  line-height: 1.08;
+}
+
+.subtitle {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.session {
+  color: var(--muted);
+  font: 11px/1.8 ui-monospace, Menlo, monospace;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 16px;
+  align-items: start;
+}
+
+.viewer {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #020507;
+  aspect-ratio: 4 / 3;
+  min-height: 280px;
+}
+
+video,
+canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+canvas {
+  pointer-events: none;
+}
+
+.scan-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 5px,
+    #0002 6px
+  );
+  opacity: .35;
+}
+
+.corner {
+  position: absolute;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  border-color: var(--green);
+  border-style: solid;
+}
+
+.tl {
+  top: 13px;
+  left: 13px;
+  border-width: 2px 0 0 2px;
+}
+
+.tr {
+  top: 13px;
+  right: 13px;
+  border-width: 2px 2px 0 0;
+}
+
+.bl {
+  bottom: 13px;
+  left: 13px;
+  border-width: 0 0 2px 2px;
+}
+
+.br {
+  bottom: 13px;
+  right: 13px;
+  border-width: 0 2px 2px 0;
+}
+
+.viewer-top,
+.viewer-bottom {
+  position: absolute;
+  z-index: 3;
+  left: 24px;
+  right: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+  font: 10px ui-monospace, Menlo, monospace;
+  letter-spacing: .08em;
+  text-shadow: 0 1px 5px #000;
+}
+
+.viewer-top {
+  top: 24px;
+}
+
+.viewer-bottom {
+  bottom: 24px;
+  color: #c4d8d2;
+}
+
+.chip {
+  padding: 5px 7px;
+  color: var(--green);
+  background: #03130dcc;
+  border: 1px solid var(--dim);
+}
+
+.start-screen {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 17px;
+  padding: 30px;
+  text-align: center;
+  background:
+    radial-gradient(circle at center, #14242a 0, #03080c 65%);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.reticle {
+  width: 78px;
+  height: 78px;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--dim);
+  border-radius: 50%;
+  color: var(--green);
+  font: 34px ui-monospace, monospace;
+  box-shadow: 0 0 35px #50efa025;
+}
+
+.start-caption {
+  color: var(--muted);
+  font: 10px ui-monospace, Menlo, monospace;
+  letter-spacing: .15em;
+}
+
+.start-button {
+  min-width: 205px;
+  padding: 15px 19px;
+  border: 1px solid var(--green);
+  border-radius: 0;
+  background: #102a20;
+  color: var(--green);
+  font: 700 11px ui-monospace, Menlo, monospace;
+  letter-spacing: .12em;
+  cursor: pointer;
+}
+
+.start-button:disabled {
+  opacity: .6;
+  cursor: default;
+}
+
+.stop-button {
+  position: absolute;
+  z-index: 6;
+  right: 23px;
+  bottom: 51px;
+  padding: 9px 11px;
+  border: 1px solid var(--amber);
+  border-radius: 0;
+  background: #11100ce0;
+  color: var(--amber);
+  font: 700 10px ui-monospace, Menlo, monospace;
+  letter-spacing: .12em;
+  cursor: pointer;
+}
+
+.face-label {
+  position: absolute;
+  z-index: 4;
+  max-width: calc(100% - 20px);
+  padding: 6px 8px;
+  border: 1px solid var(--green);
+  background: #071b13ed;
+  color: var(--green);
+  font: 700 10px ui-monospace, Menlo, monospace;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 0 16px #50efa02b;
+}
+
+.panel {
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: linear-gradient(150deg, #101b24, var(--panel));
+}
+
+.panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  color: var(--green);
+  font: 11px ui-monospace, Menlo, monospace;
+  letter-spacing: .12em;
+}
+
+.count {
+  color: var(--muted);
+}
+
+.panel-subtitle {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font: 10px/1.5 ui-monospace, Menlo, monospace;
+}
+
+.metric {
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+
+.metric-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.metric-name {
+  overflow-wrap: anywhere;
+}
+
+.metric-value {
+  color: var(--green);
+  font: 12px ui-monospace, Menlo, monospace;
+}
+
+.meter {
+  height: 3px;
+  margin-top: 9px;
+  background: #24333b;
+}
+
+.meter-fill {
+  display: block;
+  height: 100%;
+  background: var(--green);
+  box-shadow: 0 0 10px #50efa088;
+}
+
+.empty {
+  padding: 19px 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.message {
+  min-height: 40px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.message.error {
+  color: var(--amber);
+}
+
+.note {
+  margin: 15px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font: 10px/1.6 ui-monospace, Menlo, monospace;
+}
+
+.footer {
+  margin-top: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font: 10px ui-monospace, Menlo, monospace;
+}
+
+@media (max-width: 760px) {
+  .app {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .intro {
+    padding: 20px 0 15px;
+  }
+
+  .session {
+    display: none;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .viewer {
+    aspect-ratio: 3 / 4;
+    min-height: 0;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .viewer-top,
+  .viewer-bottom {
+    left: 21px;
+    right: 21px;
+  }
+
+  .stop-button {
+    right: 21px;
+    bottom: 47px;
+  }
+
+  .footer {
+    font-size: 9px;
+  }
 }
 </style>
 </head>
+
 <body>
 <div class="app">
   <header class="topbar">
@@ -81,8 +455,12 @@ canvas{pointer-events:none}
 
   <div class="intro">
     <div>
-      <h1>Espressioni in diretta<span style="color:var(--green)">.</span></h1>
-      <p class="subtitle">Segnali facciali dal vivo · elaborazione nel browser</p>
+      <h1>
+        Espressioni in diretta<span style="color:var(--green)">.</span>
+      </h1>
+      <p class="subtitle">
+        Segnali facciali dal vivo · elaborazione nel browser
+      </p>
     </div>
     <div class="session">
       SESSION / LOCAL<br>
@@ -91,7 +469,11 @@ canvas{pointer-events:none}
   </div>
 
   <main class="layout">
-    <section id="viewer" class="viewer" aria-label="Fotocamera e analisi facciale">
+    <section
+      id="viewer"
+      class="viewer"
+      aria-label="Fotocamera e analisi facciale"
+    >
       <video id="video" autoplay muted playsinline></video>
       <canvas id="overlay"></canvas>
       <div class="scan-lines"></div>
@@ -114,7 +496,9 @@ canvas{pointer-events:none}
         <span class="chip" id="faceState">NO SIGNAL</span>
       </div>
 
-      <div id="faceLabel" class="face-label" hidden>INDETERMINATA</div>
+      <div id="faceLabel" class="face-label" hidden>
+        INDETERMINATA
+      </div>
 
       <button
         id="stop"
@@ -122,7 +506,9 @@ canvas{pointer-events:none}
         type="button"
         hidden
         aria-label="Ferma analisi e spegni fotocamera"
-      >■ STOP</button>
+      >
+        ■ STOP
+      </button>
 
       <div class="viewer-bottom">
         <span id="fps">FPS --</span>
@@ -137,7 +523,8 @@ canvas{pointer-events:none}
       </div>
 
       <p class="panel-subtitle">
-        Tutti i coefficienti elaborati · visibili solo i tre più alti sopra 0.30
+        Tutti i coefficienti elaborati · visibili solo i tre più alti
+        sopra 0.30
       </p>
 
       <div id="signals">
@@ -220,18 +607,22 @@ async function startAnalysis() {
     message.textContent = "Carico il modello: serve Internet…";
 
     if (!landmarker) {
-      const { FaceLandmarker, FilesetResolver } = await import(LIBRARY);
-      const vision = await FilesetResolver.forVisionTasks(WASM);
+      const { FaceLandmarker, FilesetResolver } =
+        await import(LIBRARY);
 
-      landmarker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: MODEL,
-          delegate: "CPU"
-        },
-        runningMode: "VIDEO",
-        numFaces: 1,
-        outputFaceBlendshapes: true
-      });
+      const vision =
+        await FilesetResolver.forVisionTasks(WASM);
+
+      landmarker =
+        await FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: MODEL,
+            delegate: "CPU"
+          },
+          runningMode: "VIDEO",
+          numFaces: 1,
+          outputFaceBlendshapes: true
+        });
     }
 
     running = true;
@@ -249,16 +640,22 @@ async function startAnalysis() {
   } catch (error) {
     stopCamera();
     resetInterface();
+
     message.classList.add("error");
     message.textContent =
-      "Avvio non riuscito: " + (error?.message || String(error));
+      "Avvio non riuscito: " +
+      (error?.message || String(error));
+
     faceState.textContent = "ERROR";
   }
 }
 
 function stopCamera() {
   if (video.srcObject) {
-    video.srcObject.getTracks().forEach(track => track.stop());
+    video.srcObject
+      .getTracks()
+      .forEach(track => track.stop());
+
     video.srcObject = null;
   }
 }
@@ -273,7 +670,8 @@ function stopAnalysis() {
 
   stopCamera();
   resetInterface();
-  message.textContent = "Analisi fermata. La fotocamera è spenta.";
+  message.textContent =
+    "Analisi fermata. La fotocamera è spenta.";
 }
 
 function resetInterface() {
@@ -286,11 +684,18 @@ function resetInterface() {
 
   topStatus.textContent = "● STANDBY";
   topStatus.classList.remove("live");
+
   faceState.textContent = "NO SIGNAL";
   $("#fps").textContent = "FPS --";
   $("#clock").textContent = "T 00:00";
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
   signalCount.textContent = "00 / 03";
   signals.innerHTML =
     '<div class="empty">In attesa della fotocamera.</div>';
@@ -306,7 +711,8 @@ function updateSignals(categories) {
     .slice(0, 3);
 
   signalCount.textContent =
-    String(active.length).padStart(2, "0") + " / 03";
+    String(active.length).padStart(2, "0") +
+    " / 03";
 
   if (!active.length) {
     signals.innerHTML =
@@ -314,7 +720,8 @@ function updateSignals(categories) {
     return;
   }
 
-  const fragment = document.createDocumentFragment();
+  const fragment =
+    document.createDocumentFragment();
 
   for (const item of active) {
     const row = document.createElement("div");
@@ -339,7 +746,9 @@ function updateSignals(categories) {
     const fill = document.createElement("i");
     fill.className = "meter-fill";
     fill.style.width =
-      Math.round(Math.max(0, Math.min(1, item.score)) * 100) + "%";
+      Math.round(
+        Math.max(0, Math.min(1, item.score)) * 100
+      ) + "%";
 
     meter.append(fill);
     row.append(head, meter);
@@ -352,33 +761,56 @@ function updateSignals(categories) {
 function emotionLabel(scores) {
   const get = key => scores.get(key) ?? 0;
 
-  const smile =
-    (get("mouthSmileLeft") + get("mouthSmileRight")) / 2;
+  const average = (left, right) =>
+    (get(left) + get(right)) / 2;
 
-  const frown =
-    (get("mouthFrownLeft") + get("mouthFrownRight")) / 2;
+  const smile =
+    average("mouthSmileLeft", "mouthSmileRight");
+
+  const frownL = get("mouthFrownLeft");
+  const frownR = get("mouthFrownRight");
 
   const browDown =
-    (get("browDownLeft") + get("browDownRight")) / 2;
+    average("browDownLeft", "browDownRight");
 
   const eyeSquint =
-    (get("eyeSquintLeft") + get("eyeSquintRight")) / 2;
+    average("eyeSquintLeft", "eyeSquintRight");
 
-  const noseSneer =
-    Math.max(get("noseSneerLeft"), get("noseSneerRight"));
+  const eyeWide =
+    average("eyeWideLeft", "eyeWideRight");
+
+  const mouthStretch =
+    average("mouthStretchLeft", "mouthStretchRight");
 
   const mouthPress =
-    (get("mouthPressLeft") + get("mouthPressRight")) / 2;
+    average("mouthPressLeft", "mouthPressRight");
+
+  const noseSneer = Math.max(
+    get("noseSneerLeft"),
+    get("noseSneerRight")
+  );
 
   const jaw = get("jawOpen");
   const browUp = get("browInnerUp");
 
-  // Regole dimostrative, non un classificatore di emozioni.
+  // Queste sono regole dimostrative, non diagnosi emotive.
   if (noseSneer > 0.48) {
     return "DISGUSTO";
   }
 
-  if (jaw > 0.48 && browUp > 0.38) {
+  // Controllata prima di SORPRESA, che usa segnali simili.
+  if (
+    eyeWide > 0.40 &&
+    browUp > 0.30 &&
+    mouthStretch > 0.30
+  ) {
+    return "PAURA";
+  }
+
+  if (
+    jaw > 0.48 &&
+    browUp > 0.38
+  ) {
     return "SORPRESA";
   }
 
@@ -390,16 +822,22 @@ function emotionLabel(scores) {
     return "GIOIA";
   }
 
-  // Occhi stretti più sopracciglia abbassate oppure labbra premute.
+  // Occhi più stretti di prima: soglia alzata a 0.42.
   if (
-    eyeSquint > 0.35 &&
-    (browDown > 0.30 || mouthPress > 0.30)
+    eyeSquint > 0.42 &&
+    (
+      browDown > 0.30 ||
+      mouthPress > 0.30
+    )
   ) {
     return "RABBIA";
   }
 
-  // Angoli della bocca: soglia abbassata.
-  if (frown > 0.27 && browUp > 0.25) {
+  // Entrambi gli angoli della bocca devono scendere.
+  if (
+    frownL > 0.25 &&
+    frownR > 0.25
+  ) {
     return "TRISTEZZA";
   }
 
@@ -409,6 +847,7 @@ function emotionLabel(scores) {
 function drawFace(points) {
   const w = canvas.width;
   const h = canvas.height;
+
   const xs = points.map(point => point.x);
   const ys = points.map(point => point.y);
 
@@ -453,26 +892,46 @@ function positionFaceLabel(box) {
 
   if (!iw || !ih) return;
 
-  const scale = Math.max(vw / iw, vh / ih);
+  const scale = Math.max(
+    vw / iw,
+    vh / ih
+  );
+
   const displayedWidth = iw * scale;
   const displayedHeight = ih * scale;
-  const offsetX = (vw - displayedWidth) / 2;
-  const offsetY = (vh - displayedHeight) / 2;
+
+  const offsetX =
+    (vw - displayedWidth) / 2;
+
+  const offsetY =
+    (vh - displayedHeight) / 2;
 
   const mirroredLeft =
-    vw - (offsetX + box.right * displayedWidth);
+    vw - (
+      offsetX +
+      box.right * displayedWidth
+    );
 
   const labelTop =
-    offsetY + box.top * displayedHeight;
+    offsetY +
+    box.top * displayedHeight;
 
-  const maxLeft =
-    Math.max(8, vw - faceLabel.offsetWidth - 8);
+  const maxLeft = Math.max(
+    8,
+    vw - faceLabel.offsetWidth - 8
+  );
 
   faceLabel.style.left =
-    Math.max(8, Math.min(maxLeft, mirroredLeft)) + "px";
+    Math.max(
+      8,
+      Math.min(maxLeft, mirroredLeft)
+    ) + "px";
 
   faceLabel.style.top =
-    Math.max(48, Math.min(vh - 36, labelTop - 28)) + "px";
+    Math.max(
+      48,
+      Math.min(vh - 36, labelTop - 28)
+    ) + "px";
 }
 
 function analyze(now) {
@@ -491,58 +950,91 @@ function analyze(now) {
         canvas.height = video.videoHeight;
       }
 
-      const result = landmarker.detectForVideo(video, now);
+      const result =
+        landmarker.detectForVideo(video, now);
+
       lastVideoTime = video.currentTime;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
 
-      const points = result.faceLandmarks?.[0];
-      const blendshapes = result.faceBlendshapes?.[0];
+      const points =
+        result.faceLandmarks?.[0];
+
+      const blendshapes =
+        result.faceBlendshapes?.[0];
 
       if (points && blendshapes) {
         faceState.textContent = "TRACKING";
-        updateSignals(blendshapes.categories);
+
+        updateSignals(
+          blendshapes.categories
+        );
 
         const scores = new Map(
-          blendshapes.categories.map(item => [
-            item.categoryName,
-            item.score
-          ])
+          blendshapes.categories.map(
+            item => [
+              item.categoryName,
+              item.score
+            ]
+          )
         );
 
         const box = drawFace(points);
-        faceLabel.textContent = emotionLabel(scores);
+
+        faceLabel.textContent =
+          emotionLabel(scores);
+
         faceLabel.hidden = false;
         positionFaceLabel(box);
       } else {
         faceState.textContent = "NO FACE";
         faceLabel.hidden = true;
         signalCount.textContent = "00 / 03";
+
         signals.innerHTML =
           '<div class="empty">Nessun volto rilevato.</div>';
       }
 
       if (lastFrameTime) {
         $("#fps").textContent =
-          "FPS " + Math.round(1000 / (now - lastFrameTime));
+          "FPS " +
+          Math.round(
+            1000 / (now - lastFrameTime)
+          );
       }
 
       lastFrameTime = now;
-      const seconds = Math.floor((now - startedAt) / 1000);
+
+      const seconds = Math.floor(
+        (now - startedAt) / 1000
+      );
 
       $("#clock").textContent =
         "T " +
-        String(Math.floor(seconds / 60)).padStart(2, "0") +
+        String(
+          Math.floor(seconds / 60)
+        ).padStart(2, "0") +
         ":" +
-        String(seconds % 60).padStart(2, "0");
+        String(
+          seconds % 60
+        ).padStart(2, "0");
     }
 
-    animationId = requestAnimationFrame(analyze);
+    animationId =
+      requestAnimationFrame(analyze);
+
   } catch (error) {
     stopAnalysis();
     message.classList.add("error");
+
     message.textContent =
-      "Analisi interrotta: " + (error?.message || String(error));
+      "Analisi interrotta: " +
+      (error?.message || String(error));
   }
 }
 </script>
