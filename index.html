@@ -2,77 +2,492 @@
 <html lang="it">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Espressioni facciali — demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080d13">
+  <title>FACIAL MOTION LAB</title>
+
   <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080d13;
+      --panel: #0d151e;
+      --line: #22343e;
+      --text: #e6efed;
+      --muted: #8da3a8;
+      --green: #50efa0;
+      --green-dim: #267b58;
+      --amber: #e7ba69;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 20px;
-      font: 18px system-ui, sans-serif;
-      background: #111827;
-      color: white;
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% 0%, #162631 0, transparent 55%),
+        var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    button {
-      padding: 14px 22px;
-      font: inherit;
-      border: 0;
-      border-radius: 10px;
+
+    .app {
+      width: min(1260px, 100%);
+      margin: auto;
+      padding: max(18px, env(safe-area-inset-top)) 20px
+               max(24px, env(safe-area-inset-bottom));
     }
-    video {
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      color: var(--green);
+      font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .16em;
+    }
+
+    .brand-mark {
+      width: 9px;
+      height: 9px;
+      background: var(--green);
+      box-shadow: 0 0 14px var(--green);
+    }
+
+    .top-status {
+      color: var(--muted);
+      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
+    }
+
+    .top-status.live { color: var(--green); }
+
+    .intro {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 25px 0 20px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(27px, 4vw, 46px);
+      font-weight: 500;
+      letter-spacing: -.045em;
+      line-height: 1.08;
+    }
+
+    .subtitle {
+      margin: 9px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .session {
+      color: var(--muted);
+      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      text-align: right;
+      line-height: 1.8;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 290px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .viewer {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: #020507;
+      aspect-ratio: 4 / 3;
+      min-height: 280px;
+    }
+
+    video,
+    canvas {
+      position: absolute;
+      inset: 0;
       display: block;
       width: 100%;
-      margin-top: 18px;
-      border-radius: 12px;
+      height: 100%;
+      object-fit: cover;
       transform: scaleX(-1);
     }
-    li { margin: 10px 0; }
-    small { color: #cbd5e1; }
+
+    canvas { pointer-events: none; }
+
+    .scan-lines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 5px,
+        rgba(0, 0, 0, .12) 6px
+      );
+      opacity: .35;
+    }
+
+    .corner {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      pointer-events: none;
+      border-color: var(--green);
+      border-style: solid;
+      z-index: 2;
+    }
+
+    .corner.tl { top: 13px; left: 13px; border-width: 2px 0 0 2px; }
+    .corner.tr { top: 13px; right: 13px; border-width: 2px 2px 0 0; }
+    .corner.bl { bottom: 13px; left: 13px; border-width: 0 0 2px 2px; }
+    .corner.br { bottom: 13px; right: 13px; border-width: 0 2px 2px 0; }
+
+    .viewer-top,
+    .viewer-bottom {
+      position: absolute;
+      z-index: 3;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .08em;
+      text-shadow: 0 1px 5px #000;
+    }
+
+    .viewer-top { top: 24px; }
+    .viewer-bottom { bottom: 24px; color: #c4d8d2; }
+
+    .chip {
+      padding: 5px 7px;
+      color: var(--green);
+      background: rgba(3, 19, 13, .8);
+      border: 1px solid var(--green-dim);
+    }
+
+    .viewer-placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: 10px;
+      padding: 30px;
+      text-align: center;
+      background:
+        radial-gradient(circle at center, #14242a 0, #03080c 65%);
+    }
+
+    .viewer-placeholder .reticle {
+      margin: auto;
+      width: 74px;
+      height: 74px;
+      border: 1px solid var(--green-dim);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--green);
+      font: 32px ui-monospace, monospace;
+      box-shadow: 0 0 30px #50efa015;
+    }
+
+    .viewer-placeholder span {
+      color: var(--muted);
+      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+    }
+
+    .panel {
+      padding: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(150deg, #101b24, var(--panel));
+    }
+
+    .panel-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+      color: var(--green);
+      font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .12em;
+    }
+
+    .panel-heading .count { color: var(--muted); }
+
+    .metric {
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .metric-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .metric-value {
+      color: var(--green);
+      font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .metric-code {
+      margin-top: 5px;
+      color: var(--muted);
+      font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .meter {
+      height: 3px;
+      margin-top: 11px;
+      background: #24333b;
+    }
+
+    .meter-fill {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: var(--green);
+      box-shadow: 0 0 10px #50efa088;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid var(--green);
+      border-radius: 0;
+      background: #102a20;
+      color: var(--green);
+      font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+      letter-spacing: .13em;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: default;
+    }
+
+    .message {
+      min-height: 40px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .message.error { color: var(--amber); }
+
+    .note {
+      margin: 19px 0 0;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .footer {
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    @media (max-width: 760px) {
+      .app { padding-left: 12px; padding-right: 12px; }
+      .intro { padding: 20px 0 15px; }
+      .session { display: none; }
+      .layout { grid-template-columns: 1fr; gap: 12px; }
+      .viewer { aspect-ratio: 3 / 4; min-height: 0; }
+      .panel { padding: 14px; }
+      .viewer-top, .viewer-bottom { left: 21px; right: 21px; }
+      .footer { font-size: 9px; }
+    }
   </style>
 </head>
+
 <body>
-  <h1>Espressioni facciali</h1>
-  <p>Demo di movimenti del viso, non lettura delle emozioni.</p>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        FACIAL MOTION LAB
+      </div>
+      <div id="topStatus" class="top-status">● STANDBY</div>
+    </header>
 
-  <button id="start">Avvia la camera</button>
-  <p id="status" role="status">Pronto.</p>
-  <video id="video" autoplay muted playsinline></video>
+    <div class="intro">
+      <div>
+        <h1>Espressioni in diretta<span style="color:var(--green)">.</span></h1>
+        <p class="subtitle">Segnali facciali dal vivo · elaborazione nel browser</p>
+      </div>
+      <div class="session">
+        SESSION / LOCAL<br>
+        INPUT / FRONT CAMERA
+      </div>
+    </div>
 
-  <h2>Movimenti rilevati</h2>
-  <ul id="labels"><li>Avvia la camera per iniziare.</li></ul>
-  <small>Le soglie sono indicative: luce, posizione e volto cambiano i risultati.</small>
+    <main class="layout">
+      <section class="viewer" aria-label="Video della fotocamera con punti facciali">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+        <div class="scan-lines"></div>
 
-  <script type="module">
-    import {
-      FaceLandmarker,
-      FilesetResolver
-    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/vision_bundle.mjs";
+        <div id="placeholder" class="viewer-placeholder">
+          <div class="reticle">+</div>
+          <span>CAMERA IN ATTESA</span>
+        </div>
 
+        <i class="corner tl"></i>
+        <i class="corner tr"></i>
+        <i class="corner bl"></i>
+        <i class="corner br"></i>
+
+        <div class="viewer-top">
+          <span class="chip">FACE_01</span>
+          <span class="chip" id="faceState">NO SIGNAL</span>
+        </div>
+
+        <div class="viewer-bottom">
+          <span id="fps">FPS --</span>
+          <span id="clock">T 00:00</span>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <div class="panel-heading">
+          <span>LIVE SIGNALS</span>
+          <span class="count">01 / FACE</span>
+        </div>
+
+        <div class="metric">
+          <div class="metric-head">
+            <span>Sorriso · sinistra</span>
+            <span class="metric-value" id="smileLValue">0.00</span>
+          </div>
+          <div class="metric-code">mouthSmileLeft</div>
+          <div class="meter"><i class="meter-fill" id="smileLMeter"></i></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-head">
+            <span>Sorriso · destra</span>
+            <span class="metric-value" id="smileRValue">0.00</span>
+          </div>
+          <div class="metric-code">mouthSmileRight</div>
+          <div class="meter"><i class="meter-fill" id="smileRMeter"></i></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-head">
+            <span>Bocca aperta</span>
+            <span class="metric-value" id="jawValue">0.00</span>
+          </div>
+          <div class="metric-code">jawOpen</div>
+          <div class="meter"><i class="meter-fill" id="jawMeter"></i></div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-head">
+            <span>Sopracciglia sollevate</span>
+            <span class="metric-value" id="browValue">0.00</span>
+          </div>
+          <div class="metric-code">browInnerUp</div>
+          <div class="meter"><i class="meter-fill" id="browMeter"></i></div>
+        </div>
+
+        <button id="start" type="button">AVVIA ANALISI →</button>
+        <p id="message" class="message" role="status">
+          Premi Avvia e autorizza la fotocamera.
+        </p>
+        <p class="note">
+          BLENDSHAPE SCORES · NON SONO EMOZIONI<br>
+          Nessun video viene inviato a questo sito.
+        </p>
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <span>FACIAL MOTION LAB / DEMO</span>
+      <span>MEDIAPIPE FACE LANDMARKER</span>
+    </footer>
+  </div>
+
+  <script>
     const MODEL =
       "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
     const WASM =
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/wasm";
+    const LIBRARY =
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/vision_bundle.mjs";
 
-    const button = document.querySelector("#start");
-    const video = document.querySelector("#video");
-    const status = document.querySelector("#status");
-    const labels = document.querySelector("#labels");
+    const $ = (selector) => document.querySelector(selector);
 
-    const movements = [
-      { name: "Sorriso sinistro", key: "mouthSmileLeft" },
-      { name: "Sorriso destro", key: "mouthSmileRight" },
-      { name: "Bocca aperta", key: "jawOpen" },
-      { name: "Sopracciglia interne sollevate", key: "browInnerUp" },
-      { name: "Sopracciglio sinistro abbassato", key: "browDownLeft" },
-      { name: "Sopracciglio destro abbassato", key: "browDownRight" }
+    const video = $("#video");
+    const canvas = $("#overlay");
+    const ctx = canvas.getContext("2d");
+    const button = $("#start");
+    const message = $("#message");
+    const placeholder = $("#placeholder");
+    const faceState = $("#faceState");
+    const topStatus = $("#topStatus");
+
+    const metrics = [
+      {
+        key: "mouthSmileLeft",
+        value: $("#smileLValue"),
+        meter: $("#smileLMeter")
+      },
+      {
+        key: "mouthSmileRight",
+        value: $("#smileRValue"),
+        meter: $("#smileRMeter")
+      },
+      {
+        key: "jawOpen",
+        value: $("#jawValue"),
+        meter: $("#jawMeter")
+      },
+      {
+        key: "browInnerUp",
+        value: $("#browValue"),
+        meter: $("#browMeter")
+      }
     ];
 
     let landmarker;
     let lastVideoTime = -1;
+    let lastFrameTime = 0;
+    let startedAt = 0;
+    let running = false;
 
     button.addEventListener("click", async () => {
       button.disabled = true;
-      status.textContent = "Richiedo la camera…";
+      message.classList.remove("error");
+      message.textContent = "Richiedo la fotocamera…";
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -83,10 +498,16 @@
         video.srcObject = stream;
         await video.play();
 
-        status.textContent = "Carico MediaPipe: serve Internet al primo avvio…";
+        placeholder.style.display = "none";
+        faceState.textContent = "LOADING";
+        message.textContent = "Carico il modello: serve Internet…";
+
+        // Importazione dopo il clic: il pulsante funziona anche se il CDN fallisce.
+        const { FaceLandmarker, FilesetResolver } =
+          await import(LIBRARY);
+
         const vision = await FilesetResolver.forVisionTasks(WASM);
 
-        // CPU prima: è la scelta più semplice da provare su due piattaforme.
         landmarker = await FaceLandmarker.createFromOptions(vision, {
           baseOptions: {
             modelAssetPath: MODEL,
@@ -97,60 +518,136 @@
           outputFaceBlendshapes: true
         });
 
-        status.textContent = "In diretta.";
+        running = true;
+        startedAt = performance.now();
+        topStatus.textContent = "● LIVE";
+        topStatus.classList.add("live");
+        faceState.textContent = "SEARCHING";
+        message.textContent = "Analisi in diretta.";
+        button.textContent = "ANALISI ATTIVA";
         requestAnimationFrame(analyze);
       } catch (error) {
-        status.textContent = "Avvio non riuscito: " + error.message;
+        running = false;
+        message.classList.add("error");
+        message.textContent =
+          "Avvio non riuscito: " + (error?.message || String(error));
+        faceState.textContent = "ERROR";
+
         if (video.srcObject) {
           video.srcObject.getTracks().forEach(track => track.stop());
           video.srcObject = null;
         }
+
+        placeholder.style.display = "grid";
         button.disabled = false;
+        button.textContent = "RIPROVA →";
       }
     });
 
-    function analyze() {
+    function resetMetrics() {
+      for (const metric of metrics) {
+        metric.value.textContent = "0.00";
+        metric.meter.style.width = "0%";
+      }
+    }
+
+    function updateMetrics(categories) {
+      const scores = new Map(
+        categories.map(item => [item.categoryName, item.score])
+      );
+
+      for (const metric of metrics) {
+        const score = scores.get(metric.key) ?? 0;
+        metric.value.textContent = score.toFixed(2);
+        metric.meter.style.width =
+          `${Math.round(Math.max(0, Math.min(1, score)) * 100)}%`;
+      }
+    }
+
+    function drawFace(points) {
+      if (!points || points.length === 0) return;
+
+      const width = canvas.width;
+      const height = canvas.height;
+
+      // Il canvas è specchiato via CSS insieme al video.
+      const xs = points.map(point => point.x);
+      const ys = points.map(point => point.y);
+
+      const left = Math.min(...xs) * width;
+      const right = Math.max(...xs) * width;
+      const top = Math.min(...ys) * height;
+      const bottom = Math.max(...ys) * height;
+
+      ctx.strokeStyle = "rgba(80, 239, 160, .85)";
+      ctx.lineWidth = Math.max(1, width / 650);
+      ctx.strokeRect(left, top, right - left, bottom - top);
+
+      ctx.fillStyle = "rgba(80, 239, 160, .62)";
+      const radius = Math.max(1, width / 650);
+
+      // Un punto ogni quattro: leggibile senza coprire il volto.
+      for (let i = 0; i < points.length; i += 4) {
+        ctx.beginPath();
+        ctx.arc(
+          points[i].x * width,
+          points[i].y * height,
+          radius,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      }
+    }
+
+    function analyze(now) {
+      if (!running) return;
+
       try {
         if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
-          const result = landmarker.detectForVideo(video, performance.now());
-          lastVideoTime = video.currentTime;
-
-          const face = result.faceBlendshapes?.[0];
-          if (!face) {
-            labels.innerHTML = "<li>Nessun volto rilevato.</li>";
-          } else {
-            const scores = new Map(
-              face.categories.map(item => [item.categoryName, item.score])
-            );
-
-            const visible = movements
-              .map(item => ({
-                ...item,
-                score: scores.get(item.key) ?? 0
-              }))
-              .filter(item => item.score >= 0.40)
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 3);
-
-            labels.replaceChildren();
-
-            if (visible.length === 0) {
-              const li = document.createElement("li");
-              li.textContent = "Nessun movimento sopra la soglia.";
-              labels.append(li);
-            }
-
-            for (const item of visible) {
-              const li = document.createElement("li");
-              li.textContent =
-                `${item.name} — ${item.score.toFixed(2)} (${item.key})`;
-              labels.append(li);
-            }
+          if (canvas.width !== video.videoWidth ||
+              canvas.height !== video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
           }
+
+          const result = landmarker.detectForVideo(video, now);
+          lastVideoTime = video.currentTime;
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          const points = result.faceLandmarks?.[0];
+          const blendshapes = result.faceBlendshapes?.[0];
+
+          if (points && blendshapes) {
+            faceState.textContent = "TRACKING";
+            drawFace(points);
+            updateMetrics(blendshapes.categories);
+          } else {
+            faceState.textContent = "NO FACE";
+            resetMetrics();
+          }
+
+          if (lastFrameTime) {
+            const fps = 1000 / (now - lastFrameTime);
+            $("#fps").textContent = `FPS ${Math.round(fps)}`;
+          }
+
+          lastFrameTime = now;
+          const seconds = Math.floor((now - startedAt) / 1000);
+          const minutes = String(Math.floor(seconds / 60)).padStart(2, "0");
+          const remainder = String(seconds % 60).padStart(2, "0");
+          $("#clock").textContent = `T ${minutes}:${remainder}`;
         }
+
         requestAnimationFrame(analyze);
       } catch (error) {
-        status.textContent = "Analisi interrotta: " + error.message;
+        running = false;
+        topStatus.textContent = "● ERROR";
+        topStatus.classList.remove("live");
+        faceState.textContent = "ERROR";
+        message.classList.add("error");
+        message.textContent =
+          "Analisi interrotta: " + (error?.message || String(error));
       }
     }
   </script>
