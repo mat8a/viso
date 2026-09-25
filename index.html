@@ -282,7 +282,7 @@
       display: flex;
       justify-content: space-between;
       gap: 10px;
-      margin-bottom: 14px;
+      margin-bottom: 7px;
       color: var(--green);
       font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
       letter-spacing: .12em;
@@ -290,8 +290,20 @@
 
     .panel-heading .count { color: var(--muted); }
 
+    .panel-subtitle {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font: 10px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .signals {
+      max-height: 410px;
+      overflow-y: auto;
+      scrollbar-color: var(--green-dim) var(--panel);
+    }
+
     .metric {
-      padding: 14px 0;
+      padding: 11px 0;
       border-top: 1px solid var(--line);
     }
 
@@ -299,32 +311,37 @@
       display: flex;
       justify-content: space-between;
       gap: 10px;
-      font-size: 13px;
+      font-size: 12px;
+    }
+
+    .metric-name {
+      overflow-wrap: anywhere;
     }
 
     .metric-value {
       color: var(--green);
-      font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-
-    .metric-code {
-      margin-top: 5px;
-      color: var(--muted);
-      font: 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+      font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
     }
 
     .meter {
       height: 3px;
-      margin-top: 11px;
+      margin-top: 9px;
       background: #24333b;
     }
 
     .meter-fill {
       display: block;
-      width: 0%;
       height: 100%;
       background: var(--green);
       box-shadow: 0 0 10px #50efa088;
+    }
+
+    .empty {
+      padding: 19px 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
     }
 
     .message {
@@ -364,6 +381,7 @@
       .panel { padding: 14px; }
       .viewer-top, .viewer-bottom { left: 21px; right: 21px; }
       .stop-button { right: 21px; bottom: 47px; }
+      .signals { max-height: 300px; }
       .footer { font-size: 9px; }
     }
   </style>
@@ -414,9 +432,7 @@
           <span class="chip" id="faceState">NO SIGNAL</span>
         </div>
 
-        <div id="faceLabel" class="face-label" hidden>
-          EMOZIONE? NON DETERMINABILE
-        </div>
+        <div id="faceLabel" class="face-label" hidden>INDETERMINATA</div>
 
         <button id="stop" class="stop-button" type="button" hidden
                 aria-label="Ferma analisi e spegni fotocamera">
@@ -431,44 +447,16 @@
 
       <aside class="panel">
         <div class="panel-heading">
-          <span>LIVE SIGNALS</span>
-          <span class="count">01 / FACE</span>
+          <span>SEGNALI ATTIVI</span>
+          <span id="signalCount" class="count">00 / 52</span>
         </div>
 
-        <div class="metric">
-          <div class="metric-head">
-            <span>Sorriso · sinistra</span>
-            <span class="metric-value" id="smileLValue">0.00</span>
-          </div>
-          <div class="metric-code">mouthSmileLeft</div>
-          <div class="meter"><i class="meter-fill" id="smileLMeter"></i></div>
-        </div>
+        <p class="panel-subtitle">
+          Coefficienti sopra soglia · aggiornamento live
+        </p>
 
-        <div class="metric">
-          <div class="metric-head">
-            <span>Sorriso · destra</span>
-            <span class="metric-value" id="smileRValue">0.00</span>
-          </div>
-          <div class="metric-code">mouthSmileRight</div>
-          <div class="meter"><i class="meter-fill" id="smileRMeter"></i></div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-head">
-            <span>Bocca aperta</span>
-            <span class="metric-value" id="jawValue">0.00</span>
-          </div>
-          <div class="metric-code">jawOpen</div>
-          <div class="meter"><i class="meter-fill" id="jawMeter"></i></div>
-        </div>
-
-        <div class="metric">
-          <div class="metric-head">
-            <span>Sopracciglia sollevate</span>
-            <span class="metric-value" id="browValue">0.00</span>
-          </div>
-          <div class="metric-code">browInnerUp</div>
-          <div class="meter"><i class="meter-fill" id="browMeter"></i></div>
+        <div id="signals" class="signals">
+          <div class="empty">In attesa della fotocamera.</div>
         </div>
 
         <p id="message" class="message" role="status">
@@ -476,8 +464,10 @@
         </p>
 
         <p class="note">
-          BLENDSHAPE SCORES · ETICHETTE EMOTIVE SOLO IPOTESI<br>
-          Il video non viene caricato su un server da questa pagina.
+          52 BLENDSHAPE ANALIZZATE · SOGLIA VISIVA 0.40<br>
+          Le etichette emotive sono regole dimostrative, non una lettura
+          affidabile dello stato emotivo. Il video non viene caricato
+          su un server da questa pagina.
         </p>
       </aside>
     </main>
@@ -496,6 +486,7 @@
     const LIBRARY =
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.15/vision_bundle.mjs";
 
+    const ACTIVE_THRESHOLD = 0.40;
     const $ = selector => document.querySelector(selector);
 
     const viewer = $("#viewer");
@@ -509,29 +500,8 @@
     const faceState = $("#faceState");
     const topStatus = $("#topStatus");
     const message = $("#message");
-
-    const metrics = [
-      {
-        key: "mouthSmileLeft",
-        value: $("#smileLValue"),
-        meter: $("#smileLMeter")
-      },
-      {
-        key: "mouthSmileRight",
-        value: $("#smileRValue"),
-        meter: $("#smileRMeter")
-      },
-      {
-        key: "jawOpen",
-        value: $("#jawValue"),
-        meter: $("#jawMeter")
-      },
-      {
-        key: "browInnerUp",
-        value: $("#browValue"),
-        meter: $("#browMeter")
-      }
-    ];
+    const signals = $("#signals");
+    const signalCount = $("#signalCount");
 
     let landmarker = null;
     let running = false;
@@ -561,7 +531,7 @@
         faceState.textContent = "LOADING";
         message.textContent = "Carico il modello: serve Internet…";
 
-        // L'import avviene dopo il clic, così un errore del CDN non blocca il tasto.
+        // Importazione dopo il clic: un errore del CDN non blocca il pulsante.
         const { FaceLandmarker, FilesetResolver } = await import(LIBRARY);
         const vision = await FilesetResolver.forVisionTasks(WASM);
 
@@ -635,41 +605,105 @@
       $("#clock").textContent = "T 00:00";
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      resetMetrics();
+      signalCount.textContent = "00 / 52";
+      signals.innerHTML =
+        '<div class="empty">In attesa della fotocamera.</div>';
     }
 
-    function resetMetrics() {
-      for (const metric of metrics) {
-        metric.value.textContent = "0.00";
-        metric.meter.style.width = "0%";
+    function updateSignals(categories) {
+      // Tutti i coefficienti vengono letti; la soglia decide solo
+      // quali mostrare nel pannello.
+      const active = categories
+        .filter(item =>
+          item.categoryName !== "_neutral" &&
+          item.score >= ACTIVE_THRESHOLD
+        )
+        .sort((a, b) => b.score - a.score);
+
+      signalCount.textContent =
+        `${String(active.length).padStart(2, "0")} / 52`;
+
+      if (active.length === 0) {
+        signals.innerHTML =
+          '<div class="empty">Nessun segnale sopra la soglia.</div>';
+        return;
       }
+
+      const fragment = document.createDocumentFragment();
+
+      for (const item of active) {
+        const row = document.createElement("div");
+        row.className = "metric";
+
+        const head = document.createElement("div");
+        head.className = "metric-head";
+
+        const name = document.createElement("span");
+        name.className = "metric-name";
+        name.textContent = item.categoryName;
+
+        const value = document.createElement("span");
+        value.className = "metric-value";
+        value.textContent = item.score.toFixed(2);
+
+        head.append(name, value);
+
+        const meter = document.createElement("div");
+        meter.className = "meter";
+
+        const fill = document.createElement("i");
+        fill.className = "meter-fill";
+        fill.style.width =
+          `${Math.round(Math.max(0, Math.min(1, item.score)) * 100)}%`;
+
+        meter.append(fill);
+        row.append(head, meter);
+        fragment.append(row);
+      }
+
+      signals.replaceChildren(fragment);
     }
 
-    function updateMetrics(scores) {
-      for (const metric of metrics) {
-        const score = scores.get(metric.key) ?? 0;
-        metric.value.textContent = score.toFixed(2);
-        metric.meter.style.width =
-          `${Math.round(Math.max(0, Math.min(1, score)) * 100)}%`;
-      }
-    }
+    function emotionLabel(scores) {
+      const get = key => scores.get(key) ?? 0;
 
-    function suggestedEmotion(scores) {
-      const smileL = scores.get("mouthSmileLeft") ?? 0;
-      const smileR = scores.get("mouthSmileRight") ?? 0;
-      const jaw = scores.get("jawOpen") ?? 0;
-      const brow = scores.get("browInnerUp") ?? 0;
+      const smile =
+        (get("mouthSmileLeft") + get("mouthSmileRight")) / 2;
+      const frown =
+        (get("mouthFrownLeft") + get("mouthFrownRight")) / 2;
+      const browDown =
+        (get("browDownLeft") + get("browDownRight")) / 2;
+      const noseSneer =
+        Math.max(get("noseSneerLeft"), get("noseSneerRight"));
+      const mouthPress =
+        (get("mouthPressLeft") + get("mouthPressRight")) / 2;
+      const jaw = get("jawOpen");
+      const browUp = get("browInnerUp");
 
-      // Regole dimostrative, NON un classificatore di emozioni.
-      if (jaw > 0.48 && brow > 0.38) {
-        return "EMOZIONE? SORPRESA · IPOTESI";
-      }
-
-      if (smileL > 0.52 && smileR > 0.52) {
-        return "EMOZIONE? GIOIA · IPOTESI";
+      // Regole dimostrative: NON sono un classificatore validato.
+      if (noseSneer > 0.48) {
+        return "DISGUSTO";
       }
 
-      return "EMOZIONE? NON DETERMINABILE";
+      if (jaw > 0.48 && browUp > 0.38) {
+        return "SORPRESA";
+      }
+
+      if (smile > 0.52 &&
+          get("mouthSmileLeft") > 0.40 &&
+          get("mouthSmileRight") > 0.40) {
+        return "GIOIA";
+      }
+
+      if (browDown > 0.50 && mouthPress > 0.38) {
+        return "RABBIA";
+      }
+
+      if (frown > 0.48 && browUp > 0.35) {
+        return "TRISTEZZA";
+      }
+
+      return "INDETERMINATA";
     }
 
     function drawFace(points) {
@@ -708,7 +742,7 @@
         ctx.fill();
       }
 
-      return { left, right, top };
+      return { right, top };
     }
 
     function positionFaceLabel(box) {
@@ -719,7 +753,7 @@
 
       if (!videoWidth || !videoHeight) return;
 
-      // Il video usa object-fit: cover ed è specchiato via CSS.
+      // Stesso ritaglio object-fit: cover del video, poi specchiatura.
       const scale = Math.max(
         viewWidth / videoWidth,
         viewHeight / videoHeight
@@ -730,13 +764,13 @@
       const offsetX = (viewWidth - displayedWidth) / 2;
       const offsetY = (viewHeight - displayedHeight) / 2;
 
-      // Il bordo destro originale diventa il bordo sinistro specchiato.
       const mirroredLeft =
         viewWidth - (offsetX + box.right * displayedWidth);
       const labelTop =
         offsetY + box.top * displayedHeight;
 
-      const maxLeft = Math.max(8, viewWidth - faceLabel.offsetWidth - 8);
+      const maxLeft =
+        Math.max(8, viewWidth - faceLabel.offsetWidth - 8);
 
       faceLabel.style.left =
         `${Math.max(8, Math.min(maxLeft, mirroredLeft))}px`;
@@ -767,6 +801,7 @@
 
           if (points && blendshapes) {
             faceState.textContent = "TRACKING";
+            updateSignals(blendshapes.categories);
 
             const scores = new Map(
               blendshapes.categories.map(item => [
@@ -775,16 +810,16 @@
               ])
             );
 
-            updateMetrics(scores);
-
             const box = drawFace(points);
-            faceLabel.textContent = suggestedEmotion(scores);
+            faceLabel.textContent = emotionLabel(scores);
             faceLabel.hidden = false;
             positionFaceLabel(box);
           } else {
             faceState.textContent = "NO FACE";
             faceLabel.hidden = true;
-            resetMetrics();
+            signalCount.textContent = "00 / 52";
+            signals.innerHTML =
+              '<div class="empty">Nessun volto rilevato.</div>';
           }
 
           if (lastFrameTime) {
